@@ -1,0 +1,64 @@
+{
+  "poll_interval_minutes": {
+    "type": "int",
+    "description": "全局轮询间隔（分钟）",
+    "hint": "所有仓库共用同一个轮询周期，避免过于频繁触发 GitHub API 限流",
+    "default": 10
+  },
+  "global_token": {
+    "type": "string",
+    "description": "全局默认 GitHub Token（可选）",
+    "hint": "当某个仓库未单独配置 Token 时使用，可提升匿名请求的 API 限额（60/小时 -> 5000/小时）。私有仓库必须在下方仓库列表中单独填写有权限的 Token，此处的全局 Token 不会自动用于私有仓库。",
+    "default": ""
+  },
+  "repos": {
+    "type": "template_list",
+    "description": "要追踪的 GitHub 仓库列表",
+    "hint": "每一项对应一个仓库，可分别设置是否私有、专属 Token、监听内容与推送目标",
+    "templates": {
+      "repo": {
+        "name": "仓库",
+        "display_item": "full_name",
+        "items": {
+          "full_name": {
+            "type": "string",
+            "description": "仓库全名（owner/repo），如 AstrBotDevs/AstrBot"
+          },
+          "is_private": {
+            "type": "bool",
+            "description": "是否为私有仓库",
+            "hint": "私有仓库必须填写下方 Token，否则轮询会失败",
+            "default": false
+          },
+          "token": {
+            "type": "string",
+            "description": "该仓库专属的 Fine-grained personal access token（可选）",
+            "hint": "私有仓库必填；公开仓库留空则使用全局 Token 或匿名请求。注意：该值会以明文形式显示在管理面板中，请仅授予该 Token 访问本仓库所需的最小只读权限（Contents 与 Pull requests 的读权限即可）",
+            "default": ""
+          },
+          "branch": {
+            "type": "string",
+            "description": "监听的分支",
+            "hint": "留空则使用仓库默认分支",
+            "default": ""
+          },
+          "watch_commits": {
+            "type": "bool",
+            "description": "是否监听新的 Commit",
+            "default": true
+          },
+          "watch_pull_requests": {
+            "type": "bool",
+            "description": "是否监听 Pull Request 变化（新建/关闭/合并/更新）",
+            "default": true
+          },
+          "target_sessions": {
+            "type": "list",
+            "description": "推送目标会话（unified_msg_origin）列表",
+            "hint": "填写 AstrBot 的会话唯一标识（格式类似 platform:message_type:session_id），该仓库的更新只会推送到这里列出的会话，不会推送给其他仓库的订阅者。可使用插件提供的 /ght whoami 指令在目标会话中获取该值"
+          }
+        }
+      }
+    }
+  }
+}

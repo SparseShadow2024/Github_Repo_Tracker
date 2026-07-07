@@ -1,0 +1,7 @@
+name: astrbot_plugin_github_repo_tracker
+display_name: GitHub 仓库追踪
+desc: 监听一个或多个 GitHub 仓库的 Commit 与 Pull Request 变化，支持公开与私有仓库。
+version: v0.1.0
+author: 疏影
+repo: https://github.com/SparseShadow2024/Github_Repo_Tracker
+astrbot_version: ">=4.10.4"
