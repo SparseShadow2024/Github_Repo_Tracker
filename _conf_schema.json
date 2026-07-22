@@ -11,6 +11,32 @@
     "hint": "当某个仓库未单独配置 Token 时使用，可提升匿名请求的 API 限额（60/小时 -> 5000/小时）。私有仓库必须在下方仓库列表中单独填写有权限的 Token，此处的全局 Token 不会自动用于私有仓库。",
     "default": ""
   },
+  "show_author": {
+    "type": "bool",
+    "description": "通知中是否显示作者",
+    "default": true
+  },
+  "show_url": {
+    "type": "bool",
+    "description": "通知中是否显示原始链接",
+    "default": true
+  },
+  "show_branch": {
+    "type": "bool",
+    "description": "通知中是否显示分支（Commit 的追踪分支 / PR 的目标分支）",
+    "default": true
+  },
+  "show_content": {
+    "type": "bool",
+    "description": "通知中是否显示正文内容（Commit 的提交正文 / PR 的描述正文）",
+    "default": true
+  },
+  "show_stats": {
+    "type": "bool",
+    "description": "Commit 通知中是否显示改动行数（+新增 -删除）",
+    "hint": "开启后每条新 Commit 会额外发起一次 GitHub API 请求获取改动统计，会增加 API 调用次数与限额消耗",
+    "default": false
+  },
   "repos": {
     "type": "template_list",
     "description": "要追踪的 GitHub 仓库列表",

@@ -152,6 +152,16 @@ class GithubRepoTrackerPlugin(Star):
 
         self._save_state()
 
+    async def _get_commit_stats(
+        self, full_name: str, sha: str, headers: dict
+    ) -> Optional[dict]:
+        detail = await self._get_json(
+            f"{GITHUB_API_BASE}/repos/{full_name}/commits/{sha}", headers
+        )
+        if not detail:
+            return None
+        return detail.get("stats")
+
     async def _get_json(self, url: str, headers: dict, params: Optional[dict] = None) -> Any:
         async with self._session.get(url, headers=headers, params=params) as resp:
             if resp.status == 404:
@@ -202,8 +212,12 @@ class GithubRepoTrackerPlugin(Star):
         if not new_commits:
             return
 
+        show_stats = bool(self.config.get("show_stats", False))
         for commit in reversed(new_commits):
-            text = self._format_commit_message(full_name, commit, branch)
+            stats = None
+            if show_stats:
+                stats = await self._get_commit_stats(full_name, commit["sha"], headers)
+            text = self._format_commit_message(full_name, commit, branch, stats)
             await self._push(target_sessions, text)
 
     async def _check_pull_requests(
@@ -241,8 +255,22 @@ class GithubRepoTrackerPlugin(Star):
             text = self._format_pr_message(full_name, pr)
             await self._push(target_sessions, text)
 
-    @staticmethod
-    def _format_commit_message(full_name: str, commit: dict, branch: Optional[str] = None) -> str:
+    def _display_flags(self) -> dict:
+        return {
+            "author": bool(self.config.get("show_author", True)),
+            "url": bool(self.config.get("show_url", True)),
+            "branch": bool(self.config.get("show_branch", True)),
+            "content": bool(self.config.get("show_content", True)),
+        }
+
+    def _format_commit_message(
+        self,
+        full_name: str,
+        commit: dict,
+        branch: Optional[str] = None,
+        stats: Optional[dict] = None,
+    ) -> str:
+        flags = self._display_flags()
         sha = commit["sha"][:7]
         full_message = commit["commit"]["message"]
         title, _, content = full_message.partition("\n\n")
@@ -251,20 +279,30 @@ class GithubRepoTrackerPlugin(Star):
             commit.get("author", {}) or {}
         ).get("login") or commit["commit"]["author"]["name"]
         url = commit["html_url"]
-        branch_line = f"分支: {branch}\n" if branch else ""
-        content_line = f"内容: {content}\n" if content else ""
+
+        branch_line = f"分支: {branch}\n" if (flags["branch"] and branch) else ""
+        author_line = f"作者: {author}\n" if flags["author"] else ""
+        content_line = f"内容: {content}\n" if (flags["content"] and content) else ""
+        url_line = f"{url}" if flags["url"] else ""
+        stats_line = ""
+        if stats:
+            additions = stats.get("additions", 0)
+            deletions = stats.get("deletions", 0)
+            stats_line = f"改动: +{additions} -{deletions}\n"
+
         return (
             f"Commit {sha}\n"
             f"仓库: {full_name}\n"
             f"{branch_line}"
-            f"作者: {author}\n"
+            f"{stats_line}"
+            f"{author_line}"
             f"标题: {title}\n"
             f"{content_line}"
-            f"{url}"
-        )
+            f"{url_line}"
+        ).rstrip("\n")
 
-    @staticmethod
-    def _format_pr_message(full_name: str, pr: dict) -> str:
+    def _format_pr_message(self, full_name: str, pr: dict) -> str:
+        flags = self._display_flags()
         number = pr["number"]
         title = pr["title"]
         content = (pr.get("body") or "").strip()
@@ -274,17 +312,21 @@ class GithubRepoTrackerPlugin(Star):
         status = "已合并" if merged else ("已关闭" if state == "closed" else "开放中")
         base_branch = pr.get("base", {}).get("ref")
         url = pr["html_url"]
-        branch_line = f"分支: {base_branch}\n" if base_branch else ""
-        content_line = f"内容: {content}\n" if content else ""
+
+        branch_line = f"分支: {base_branch}\n" if (flags["branch"] and base_branch) else ""
+        author_line = f"作者: {user}\n" if flags["author"] else ""
+        content_line = f"内容: {content}\n" if (flags["content"] and content) else ""
+        url_line = f"{url}" if flags["url"] else ""
+
         return (
             f"PR #{number} {status}\n"
             f"仓库: {full_name}\n"
             f"{branch_line}"
-            f"作者: {user}\n"
+            f"{author_line}"
             f"标题: {title}\n"
             f"{content_line}"
-            f"{url}"
-        )
+            f"{url_line}"
+        ).rstrip("\n")
 
     async def _push(self, target_sessions: list[str], text: str):
         for umo in target_sessions:
@@ -362,7 +404,13 @@ class GithubRepoTrackerPlugin(Star):
             yield event.plain_result(f"未能获取 {full_name} 的 Commit，请检查仓库名/权限/Token")
             return
 
-        yield event.plain_result(self._format_commit_message(full_name, commits[0], branch))
+        stats = None
+        if bool(self.config.get("show_stats", False)):
+            stats = await self._get_commit_stats(full_name, commits[0]["sha"], headers)
+
+        yield event.plain_result(
+            self._format_commit_message(full_name, commits[0], branch, stats)
+        )
 
     @ght.command("prs")
     async def ght_prs(self, event: AstrMessageEvent, full_name: str):

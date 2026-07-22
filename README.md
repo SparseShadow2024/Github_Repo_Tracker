@@ -16,6 +16,8 @@
 
 - `poll_interval_minutes`：轮询间隔（分钟），所有仓库共用。
 - `global_token`：全局默认 Token（可选），仅用于未单独配置 Token 的公开仓库，不会自动用于私有仓库。
+- `show_author` / `show_url` / `show_branch` / `show_content`：通知中是否显示作者 / 原始链接 / 分支 / 正文内容，默认全部开启，Commit 与 PR 通知共用同一套开关。
+- `show_stats`：Commit 通知中是否显示改动行数（`+新增 -删除`），默认关闭。开启后每条新 Commit 都会额外请求一次 GitHub 单个 Commit 详情接口，会增加 API 调用次数与限额消耗。
 - `repos`：仓库列表，每项包含：
   - `full_name`：仓库全名，如 `AstrBotDevs/AstrBot`
   - `is_private`：是否私有仓库
